@@ -40,6 +40,7 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
     this.maxLength,
     this.separatorWidget,
     this.listItemsGap,
+    this.withRefreshIndicator = true,
     this.gridCrossAxisCount,
     this.gridMainAxisSpacing,
     this.gridCrossAxisSpacing,
@@ -98,6 +99,9 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
   /// If no items are there to display, shows a refresh icon to again call the
   /// API to update the results.
   final bool showRefreshIcon;
+
+  /// RefreshIndicator is avaliable
+  final bool withRefreshIndicator;
 
   /// Whether to paginate a specific list of items or not. Defaults to true.
   final bool paginate;
@@ -281,7 +285,7 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
       return _emptyWidget(widget.emptyText);
     } else if (widget.response?.items == null && mockItem == null) {
       return _loaderBuilder();
-    } else if (widget.shrinkWrap) {
+    } else if (widget.shrinkWrap || !widget.withRefreshIndicator) {
       return _buildItems();
     } else {
       return RefreshIndicator(
