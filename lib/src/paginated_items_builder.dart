@@ -48,8 +48,9 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
     this.gridChildAspectRatio,
     this.scrollDirection = Axis.vertical,
     this.scrollPhysics,
-    this.scrollPrimary,
-  }) : super(key: key);
+    bool? scrollPrimary,
+  })  : scrollPrimary = scrollPrimary ?? scrollController == null && identical(scrollDirection, Axis.vertical),
+        super(key: key);
 
   /// This is the controller function that should handle fetching the list
   /// and updating in the state.
@@ -223,7 +224,7 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
 }
 
 class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
-  late final ScrollController _scrollController;
+  ScrollController? _scrollController;
 
   bool _initialLoading = true;
   bool _loadingMoreData = false;
@@ -316,7 +317,7 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
 
   @override
   void initState() {
-    _scrollController = widget.scrollController ?? ScrollController();
+    _scrollController = widget.scrollController ?? (widget.scrollPrimary == true ? null : ScrollController());
 
     mockItem = PaginatedItemsBuilder.config?.mockItemGetter<T>();
 
@@ -335,7 +336,7 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
 
   @override
   void dispose() {
-    if (widget.scrollController == null) _scrollController.dispose();
+    if (widget.scrollController == null) _scrollController?.dispose();
     super.dispose();
   }
 
