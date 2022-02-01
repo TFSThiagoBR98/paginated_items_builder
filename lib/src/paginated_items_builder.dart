@@ -40,12 +40,15 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
     this.maxLength,
     this.separatorWidget,
     this.listItemsGap,
+    this.reverse = false,
     this.withRefreshIndicator = true,
     this.gridCrossAxisCount,
     this.gridMainAxisSpacing,
     this.gridCrossAxisSpacing,
     this.gridChildAspectRatio,
     this.scrollDirection = Axis.vertical,
+    this.scrollPhysics,
+    this.scrollPrimary,
   }) : super(key: key);
 
   /// This is the controller function that should handle fetching the list
@@ -72,6 +75,22 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
   /// Scroll direction of the list/grid view
   final Axis scrollDirection;
 
+  /// {@template flutter.widgets.scroll_view.reverse}
+  /// Whether the scroll view scrolls in the reading direction.
+  ///
+  /// For example, if the reading direction is left-to-right and
+  /// [scrollDirection] is [Axis.horizontal], then the scroll view scrolls from
+  /// left to right when [reverse] is false and from right to left when
+  /// [reverse] is true.
+  ///
+  /// Similarly, if [scrollDirection] is [Axis.vertical], then the scroll view
+  /// scrolls from top to bottom when [reverse] is false and from bottom to top
+  /// when [reverse] is true.
+  ///
+  /// Defaults to false.
+  /// {@endtemplate}
+  final bool reverse;
+
   /// Whether the extent of the scroll view in the [scrollDirection] should be
   /// determined by the contents being viewed.
   ///
@@ -82,6 +101,69 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
   ///
   /// Defaults to false
   final bool shrinkWrap;
+
+  /// {@template flutter.widgets.scroll_view.physics}
+  /// How the scroll view should respond to user input.
+  ///
+  /// For example, determines how the scroll view continues to animate after the
+  /// user stops dragging the scroll view.
+  ///
+  /// Defaults to matching platform conventions. Furthermore, if [primary] is
+  /// false, then the user cannot scroll if there is insufficient content to
+  /// scroll, while if [primary] is true, they can always attempt to scroll.
+  ///
+  /// To force the scroll view to always be scrollable even if there is
+  /// insufficient content, as if [primary] was true but without necessarily
+  /// setting it to true, provide an [AlwaysScrollableScrollPhysics] physics
+  /// object, as in:
+  ///
+  /// ```dart
+  ///   physics: const AlwaysScrollableScrollPhysics(),
+  /// ```
+  ///
+  /// To force the scroll view to use the default platform conventions and not
+  /// be scrollable if there is insufficient content, regardless of the value of
+  /// [primary], provide an explicit [ScrollPhysics] object, as in:
+  ///
+  /// ```dart
+  ///   physics: const ScrollPhysics(),
+  /// ```
+  ///
+  /// The physics can be changed dynamically (by providing a new object in a
+  /// subsequent build), but new physics will only take effect if the _class_ of
+  /// the provided object changes. Merely constructing a new instance with a
+  /// different configuration is insufficient to cause the physics to be
+  /// reapplied. (This is because the final object used is generated
+  /// dynamically, which can be relatively expensive, and it would be
+  /// inefficient to speculatively create this object each frame to see if the
+  /// physics should be updated.)
+  /// {@endtemplate}
+  ///
+  /// If an explicit [ScrollBehavior] is provided to [scrollBehavior], the
+  /// [ScrollPhysics] provided by that behavior will take precedence after
+  /// [physics].
+  final ScrollPhysics? scrollPhysics;
+
+  /// {@template flutter.widgets.scroll_view.primary}
+  /// Whether this is the primary scroll view associated with the parent
+  /// [PrimaryScrollController].
+  ///
+  /// When this is true, the scroll view is scrollable even if it does not have
+  /// sufficient content to actually scroll. Otherwise, by default the user can
+  /// only scroll the view if it has sufficient content. See [physics].
+  ///
+  /// Also when true, the scroll view is used for default [ScrollAction]s. If a
+  /// ScrollAction is not handled by an otherwise focused part of the application,
+  /// the ScrollAction will be evaluated using this scroll view, for example,
+  /// when executing [Shortcuts] key events like page up and down.
+  ///
+  /// On iOS, this also identifies the scroll view that will scroll to top in
+  /// response to a tap in the status bar.
+  /// {@endtemplate}
+  ///
+  /// Defaults to true when [scrollDirection] is [Axis.vertical] and
+  /// [controller] is null.
+  final bool? scrollPrimary;
 
   /// The amount of space by which to inset the children.
   final EdgeInsets? padding;
@@ -137,8 +219,7 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
   final double? gridChildAspectRatio;
 
   @override
-  _PaginatedItemsBuilderState<T> createState() =>
-      _PaginatedItemsBuilderState<T>();
+  _PaginatedItemsBuilderState<T> createState() => _PaginatedItemsBuilderState<T>();
 }
 
 class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
@@ -157,10 +238,7 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
 
   Future<void> fetchData({bool reset = false}) async {
     if (!mounted) return;
-    if (!reset &&
-        (widget.response != null &&
-            !widget.response!.hasMoreData &&
-            !_loadingMoreData)) return;
+    if (!reset && (widget.response != null && !widget.response!.hasMoreData && !_loadingMoreData)) return;
     setState(() {
       if (_initialLoading) {
         _initialLoading = false;
@@ -195,8 +273,7 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
   Widget _loaderBuilder() {
     Widget _buildLoader() => mockItem != null
         ? Shimmer.fromColors(
-            highlightColor:
-                PaginatedItemsBuilder.config!.shimmerConfig.highlightColor,
+            highlightColor: PaginatedItemsBuilder.config!.shimmerConfig.highlightColor,
             baseColor: PaginatedItemsBuilder.config!.shimmerConfig.baseColor,
             period: PaginatedItemsBuilder.config!.shimmerConfig.period,
             child: IgnorePointer(
@@ -251,8 +328,7 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
     // });
     // }
 
-    PaginatedItemsBuilder.config ??=
-        PaginatedItemsBuilderConfig.defaultConfig();
+    PaginatedItemsBuilder.config ??= PaginatedItemsBuilderConfig.defaultConfig();
 
     super.initState();
   }
@@ -266,19 +342,22 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
   @override
   Widget build(BuildContext context) {
     showLoader = (widget.paginate && (widget.response?.hasMoreData ?? false));
-    itemsScrollController =
-        widget.scrollController == null ? _scrollController : null;
-    scrollPhysics =
-        (widget.shrinkWrap && widget.neverScrollablePhysicsOnShrinkWrap)
-            ? const NeverScrollableScrollPhysics()
-            : const AlwaysScrollableScrollPhysics();
+    itemsScrollController = widget.scrollController == null ? _scrollController : null;
+    scrollPhysics = widget.scrollPhysics ??
+        (widget.scrollPrimary == true ||
+                (widget.scrollPrimary == null &&
+                    widget.scrollController == null &&
+                    identical(widget.scrollDirection, Axis.vertical))
+            ? const AlwaysScrollableScrollPhysics()
+            : null);
+
+    if (widget.shrinkWrap && widget.neverScrollablePhysicsOnShrinkWrap && widget.scrollPhysics == null) {
+      scrollPhysics = const NeverScrollableScrollPhysics();
+    }
+
     (() {
-      final _itemsLen =
-          (widget.response?.items?.length ?? widget.loaderItemsCount) +
-              (showLoader ? 1 : 0);
-      itemCount = widget.maxLength == null
-          ? _itemsLen
-          : min(_itemsLen, widget.maxLength!);
+      final _itemsLen = (widget.response?.items?.length ?? widget.loaderItemsCount) + (showLoader ? 1 : 0);
+      itemCount = widget.maxLength == null ? _itemsLen : min(_itemsLen, widget.maxLength!);
     })();
 
     if (widget.response?.items?.isEmpty ?? false) {
@@ -296,15 +375,15 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
     }
   }
 
-  Widget _buildItems() => widget.itemsDisplayType == ItemsDisplayType.list
-      ? _buildListView()
-      : _buildGridView();
+  Widget _buildItems() => widget.itemsDisplayType == ItemsDisplayType.list ? _buildListView() : _buildGridView();
 
   ListView _buildListView() {
     return ListView.separated(
       shrinkWrap: widget.shrinkWrap,
       physics: scrollPhysics,
       controller: itemsScrollController,
+      primary: widget.scrollPrimary,
+      reverse: widget.reverse,
       scrollDirection: widget.scrollDirection,
       itemBuilder: _itemBuilder,
       padding: widget.padding,
@@ -323,6 +402,7 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
       shrinkWrap: widget.shrinkWrap,
       physics: scrollPhysics,
       controller: itemsScrollController,
+      reverse: widget.reverse,
       scrollDirection: widget.scrollDirection,
       itemBuilder: _itemBuilder,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
