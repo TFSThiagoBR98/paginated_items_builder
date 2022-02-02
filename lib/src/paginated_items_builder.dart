@@ -46,6 +46,7 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
     this.gridMainAxisSpacing,
     this.gridCrossAxisSpacing,
     this.gridChildAspectRatio,
+    this.gridDelegate,
     this.scrollDirection = Axis.vertical,
     this.scrollPhysics,
     bool? scrollPrimary,
@@ -218,6 +219,13 @@ class PaginatedItemsBuilder<T> extends StatefulWidget {
   final double? gridMainAxisSpacing;
   final double? gridCrossAxisSpacing;
   final double? gridChildAspectRatio;
+
+  /// A delegate that controls the layout of the children within the [GridView].
+  ///
+  /// The [GridView], [GridView.builder], and [GridView.custom] constructors let you specify this
+  /// delegate explicitly. The other constructors create a [gridDelegate]
+  /// implicitly.
+  final SliverGridDelegate? gridDelegate;
 
   @override
   _PaginatedItemsBuilderState<T> createState() => _PaginatedItemsBuilderState<T>();
@@ -406,12 +414,13 @@ class _PaginatedItemsBuilderState<T> extends State<PaginatedItemsBuilder<T>> {
       reverse: widget.reverse,
       scrollDirection: widget.scrollDirection,
       itemBuilder: _itemBuilder,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        childAspectRatio: widget.gridChildAspectRatio ?? 1,
-        crossAxisCount: widget.gridCrossAxisCount ?? 2,
-        mainAxisSpacing: widget.gridMainAxisSpacing ?? 15,
-        crossAxisSpacing: widget.gridCrossAxisSpacing ?? 15,
-      ),
+      gridDelegate: widget.gridDelegate ??
+          SliverGridDelegateWithFixedCrossAxisCount(
+            childAspectRatio: widget.gridChildAspectRatio ?? 1,
+            crossAxisCount: widget.gridCrossAxisCount ?? 2,
+            mainAxisSpacing: widget.gridMainAxisSpacing ?? 15,
+            crossAxisSpacing: widget.gridCrossAxisSpacing ?? 15,
+          ),
       padding: widget.padding,
       itemCount: itemCount,
     );
